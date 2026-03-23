@@ -2,6 +2,9 @@ import streamlit as st
 from supabase import create_client
 import time
 
+# --- CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(page_title="Prode Online", page_icon="⚽")
+
 # Pon esto al principio de tu app
 st.warning("⚠️ ¡Recuerda! Tienes hasta el viernes a las 20:00 para cerrar tus apuestas de la Jornada 29.")
 
@@ -29,10 +32,17 @@ LOGOS_EQUIPOS = {
     "Default": "https://upload.wikimedia.org/wikipedia/commons/d/d3/Soccerball.svg"
 }
 
-# 1. CONFIGURACIÓN
-URL = "https://aaviaesmmozgngfawhap.supabase.co"
-KEY = "sb_publishable_0HuL4pyr6RYoxt7Nb6McJQ_kQYDSDwW"
+# --- 1. CONFIGURACIÓN DE CONEXIÓN ---
+# IMPORTANTE: Configura estos nombres en Streamlit Cloud -> Settings -> Secrets
+URL = st.secrets["https://aaviaesmmozgngfawhap.supabase.co"]
+KEY = st.secrets["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhdmlhZXNtbW96Z25nZmF3aGFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxODQ4NjEsImV4cCI6MjA4OTc2MDg2MX0.0kWRxaVrKrXbImvk9ccViYCoKnJNYERZz6UOAPyKhM0"]           # La 'anon public key'
+SERVICE_KEY = st.secrets["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhdmlhZXNtbW96Z25nZmF3aGFwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDE4NDg2MSwiZXhwIjoyMDg5NzYwODYxfQ.JA3ETEqBHVGzM0Q-r3L0ruVWAmYoAfUUFSQrJIEahGQ"] # La 'service_role key'
+
+# Cliente para usuarios (respeta RLS)
 supabase = create_client(URL, KEY)
+
+# Cliente para el administrador (salta RLS)
+supabase_admin = create_client(URL, SERVICE_KEY)
 
 st.title("⚽ Prode Online: ¡Adivina y Gana!")
 
@@ -58,10 +68,11 @@ if st.session_state.user is None:
                         "id": res.user.id, 
                         "username": email.split('@')[0]
                     }
+                    # Usamos el cliente normal para el perfil
                     supabase.table("profiles").upsert(nuevo_perfil).execute()
                     st.sidebar.success("✅ ¡Cuenta creada! Ahora cambia a 'Login'.")
                 else:
-                    st.sidebar.error("No se pudo crear el usuario. Revisa el formato del email.")
+                    st.sidebar.error("No se pudo crear el usuario.")
             except Exception as e:
                 st.sidebar.error(f"Error al registrar: {e}")
 
@@ -86,7 +97,7 @@ if st.session_state.user is None:
     st.info("👈 Por favor, regístrate o inicia sesión en el menú de la izquierda para ver los partidos.")
     st.stop() 
 
-# --- SECCIÓN: MI PERFIL (MODIFICAR APODO) ---
+# --- SECCIÓN: MI PERFIL ---
 with st.sidebar.expander("⚙️ Configuración de Perfil"):
     st.subheader("Tu Apodo en el Ranking")
     perfil_actual = supabase.table("profiles").select("username").eq("id", st.session_state.user.id).single().execute()
@@ -97,7 +108,7 @@ with st.sidebar.expander("⚙️ Configuración de Perfil"):
     if st.button("Guardar Cambios"):
         try:
             supabase.table("profiles").update({"username": nuevo_nombre}).eq("id", st.session_state.user.id).execute()
-            st.success("¡Apodo actualizado! Refresca para ver los cambios.")
+            st.success("¡Apodo actualizado!")
             st.rerun()
         except Exception as e:
             st.error(f"Error al actualizar: {e}")
@@ -118,24 +129,13 @@ else:
     for partido in partidos:
         with st.container():
             col_img1, col_vs, col_img2 = st.columns([1, 3, 1])
-            
             with col_img1:
-                url_l = LOGOS_EQUIPOS.get(partido['equipo_local'], LOGOS_EQUIPOS["Default"])
-                st.image(url_l, width=60)
-                
+                st.image(LOGOS_EQUIPOS.get(partido['equipo_local'], LOGOS_EQUIPOS["Default"]), width=60)
             with col_vs:
-                st.markdown(
-                    f"<h3 style='text-align: center; padding-top: 10px;'>"
-                    f"{partido['equipo_local']} vs {partido['equipo_visitante']}"
-                    f"</h3>", 
-                    unsafe_allow_html=True
-                )
-                
+                st.markdown(f"<h3 style='text-align: center;'>{partido['equipo_local']} vs {partido['equipo_visitante']}</h3>", unsafe_allow_html=True)
             with col_img2:
-                url_v = LOGOS_EQUIPOS.get(partido['equipo_visitante'], LOGOS_EQUIPOS["Default"])
-                st.image(url_v, width=60)
+                st.image(LOGOS_EQUIPOS.get(partido['equipo_visitante'], LOGOS_EQUIPOS["Default"]), width=60)
 
-            st.write("---") 
             c1, c2 = st.columns(2)
             with c1:
                 goles_l = st.number_input(f"Goles {partido['equipo_local']}", min_value=0, key=f"l_{partido['id']}")
@@ -151,88 +151,39 @@ else:
                         "user_id": st.session_state.user.id
                     }
                     supabase.table("predictions").insert(data).execute()
-                    st.success(f"✅ ¡Predicción guardada para {partido['equipo_local']} vs {partido['equipo_visitante']}!")
+                    st.success("✅ ¡Predicción guardada!")
                 except Exception as e:
-                    st.error(f"Error al guardar: {e}")
-            
-            st.divider() 
+                    st.error(f"Error al guardar apuesta: {e}")
+            st.divider()
 
-# --- SECCIÓN: HISTORIAL DE MIS APUESTAS ---
-st.subheader("📝 Mi Historial de Pronósticos")
-
-mis_preds = supabase.table("predictions") \
-    .select("*, matches(*)") \
-    .eq("user_id", st.session_state.user.id) \
-    .execute().data
-
-if not mis_preds:
-    st.info("Aún no tienes apuestas finalizadas.")
-else:
-    for p in mis_preds:
-        info_partido = p.get('matches')
-        if info_partido and info_partido.get('finalizado'):
-            real_l = info_partido['goles_local_real']
-            real_v = info_partido['goles_visitante_real']
-            pred_l = p['prediccion_local']
-            pred_v = p['prediccion_visitante']
-            
-            if pred_l == real_l and pred_v == real_v:
-                st.success(f"🎯 **{info_partido['equipo_local']} {real_l} - {real_v} {info_partido['equipo_visitante']}** \nTu apuesta: {pred_l}-{pred_v} | **+3 puntos**")
-            else:
-                s_real = 1 if real_l > real_v else (2 if real_v > real_l else 0)
-                s_pred = 1 if pred_l > pred_v else (2 if pred_v > pred_l else 0)
-                
-                if s_real == s_pred:
-                    st.info(f"✅ **{info_partido['equipo_local']} {real_l} - {real_v} {info_partido['equipo_visitante']}** \nTu apuesta: {pred_l}-{pred_v} | **+1 punto**")
-                else:
-                    st.error(f"❌ **{info_partido['equipo_local']} {real_l} - {real_v} {info_partido['equipo_visitante']}** \nTu apuesta: {pred_l}-{pred_v} | **0 puntos**")
-
-# --- PARTE 3: TABLA DE POSICIONES ---
-st.divider()
+# --- 5. TABLA DE POSICIONES ---
 st.header("🏆 Tabla de Posiciones")
-
 try:
     preds = supabase.table("predictions").select("*, matches(goles_local_real, goles_visitante_real, finalizado), profiles(username)").execute().data
     ranking = {}
-
     for p in preds:
         info_partido = p.get('matches')
         if info_partido and info_partido.get('finalizado'):
             user = p.get('profiles', {}).get('username', 'Usuario Anónimo')
-            if user not in ranking:
-                ranking[user] = 0
-            
-            real_l = info_partido['goles_local_real']
-            real_v = info_partido['goles_visitante_real']
-            pred_l = p['prediccion_local']
-            pred_v = p['prediccion_visitante']
-            
+            if user not in ranking: ranking[user] = 0
+            real_l, real_v = info_partido['goles_local_real'], info_partido['goles_visitante_real']
+            pred_l, pred_v = p['prediccion_local'], p['prediccion_visitante']
             if pred_l == real_l and pred_v == real_v:
                 ranking[user] += 3
-            else:
-                signo_real = 1 if real_l > real_v else (2 if real_v > real_l else 0)
-                signo_pred = 1 if pred_l > pred_v else (2 if pred_v > pred_l else 0)
-                if signo_real == signo_pred:
-                    ranking[user] += 1
+            elif (real_l > real_v and pred_l > pred_v) or (real_v > real_l and pred_v > pred_l) or (real_l == real_v and pred_l == pred_v):
+                ranking[user] += 1
 
     if not ranking:
-        st.info("Todavía no hay puntos repartidos. ¡Esperando a que terminen los partidos!")
+        st.info("Todavía no hay puntos repartidos.")
     else:
         ranking_ordenado = sorted(ranking.items(), key=lambda x: x[1], reverse=True)
         for i, (usuario, puntos) in enumerate(ranking_ordenado):
-            if i == 0:
-                st.success(f"🥇 **{usuario}**: {puntos} pts")
-            elif i == 1:
-                st.info(f"🥈 **{usuario}**: {puntos} pts")
-            elif i == 2:
-                st.warning(f"🥉 **{usuario}**: {puntos} pts")
-            else:
-                st.write(f"👤 **{usuario}**: {puntos} pts")
-
+            st.write(f"{'🥇' if i==0 else '🥈' if i==1 else '🥉' if i==2 else '👤'} **{usuario}**: {puntos} pts")
 except Exception as e:
-    st.error(f"Error al calcular el ranking: {e}")
+    st.error(f"Error al calcular ranking: {e}")
 
-# --- SECCIÓN: PANEL DE ADMINISTRADOR (SOLO PARA TI) ---
+# --- 6. PANEL DE ADMINISTRADOR ---
+# Asegúrate de que este ID sea el tuyo en la tabla auth.users
 ADMIN_ID = "19789338-f0e2-4766-be43-7a8c5c805339" 
 
 if st.session_state.user.id == ADMIN_ID:
@@ -241,47 +192,44 @@ if st.session_state.user.id == ADMIN_ID:
     
     with st.expander("🔑 Añadir Nuevos Partidos"):
         lista_equipos = sorted([e for e in LOGOS_EQUIPOS.keys() if e != "Default"])
-        col1, col2 = st.columns(2)
-        with col1:
+        c1, c2 = st.columns(2)
+        with c1:
             local = st.selectbox("Equipo Local", lista_equipos)
-            fecha = st.date_input("Fecha del partido")
-        with col2:
+            fecha = st.date_input("Fecha")
+        with c2:
             visitante = st.selectbox("Equipo Visitante", lista_equipos, index=1)
-            hora = st.time_input("Hora del partido")
+            hora = st.time_input("Hora")
 
-        if st.button("Publicar Partido en el Prode", use_container_width=True):
+        if st.button("Publicar Partido", use_container_width=True):
             nuevo_match = {
-                "equipo_local": local,
-                "equipo_visitante": visitante,
-                "fecha": str(fecha),
-                "hora": str(hora),
-                "finalizado": False
+                "equipo_local": local, "equipo_visitante": visitante,
+                "fecha": str(fecha), "hora": str(hora), "finalizado": False
             }
             try:
-                supabase.table("matches").insert(nuevo_match).execute()
-                st.success(f"✅ ¡Partido {local} vs {visitante} añadido con éxito!")
+                # AQUÍ USAMOS EL CLIENTE ADMIN
+                supabase_admin.table("matches").insert(nuevo_match).execute()
+                st.success("✅ ¡Partido añadido!")
                 st.rerun()
             except Exception as e:
-                st.error(f"Error al guardar: {e}")
+                st.error(f"Error Admin: {e}")
 
-    with st.expander("🏆 Finalizar Partidos y Cargar Resultados"):
+    with st.expander("🏆 Finalizar Partidos"):
         partidos_abiertos = supabase.table("matches").select("*").eq("finalizado", False).execute().data
         if not partidos_abiertos:
-            st.info("No hay partidos pendientes de finalizar.")
+            st.info("No hay partidos pendientes.")
         else:
             for m in partidos_abiertos:
-                with st.container():
-                    col_p, col_r1, col_r2, col_btn = st.columns([3, 1, 1, 2])
-                    col_p.write(f"**{m['equipo_local']} vs {m['equipo_visitante']}**")
-                    
-                    res_l = col_r1.number_input("L", min_value=0, key=f"res_l_{m['id']}")
-                    res_v = col_r2.number_input("V", min_value=0, key=f"res_v_{m['id']}")
-                    
-                    if col_btn.button("Puntuar", key=f"fin_{m['id']}"):
-                        supabase.table("matches").update({
-                            "goles_local_real": res_l,
-                            "goles_visitante_real": res_v,
-                            "finalizado": True
-                        }).eq("id", m['id']).execute()
-                        st.success(f"Partido cerrado: {res_l}-{res_v}. ¡Puntos repartidos!")
-                        st.rerun()
+                col_p, col_r1, col_r2, col_btn = st.columns([3, 1, 1, 2])
+                col_p.write(f"**{m['equipo_local']} vs {m['equipo_visitante']}**")
+                res_l = col_r1.number_input("L", min_value=0, key=f"res_l_{m['id']}")
+                res_v = col_r2.number_input("V", min_value=0, key=f"res_v_{m['id']}")
+                
+                if col_btn.button("Puntuar", key=f"fin_{m['id']}"):
+                    # AQUÍ TAMBIÉN USAMOS EL CLIENTE ADMIN
+                    supabase_admin.table("matches").update({
+                        "goles_local_real": res_l,
+                        "goles_visitante_real": res_v,
+                        "finalizado": True
+                    }).eq("id", m['id']).execute()
+                    st.success("¡Puntos repartidos!")
+                    st.rerun()
