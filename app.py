@@ -32,15 +32,15 @@ LOGOS_EQUIPOS = {
     "Default": "https://upload.wikimedia.org/wikipedia/commons/d/d3/Soccerball.svg"
 }
 # --- 1. CONFIGURACIÓN DE CONEXIÓN ---
-# Aquí solo ponemos los "nombres" de los secretos
 URL = st.secrets["SUPABASE_URL"]
 KEY = st.secrets["SUPABASE_KEY"]
 SERVICE_KEY = st.secrets["SUPABASE_SERVICE_KEY"]
 
-# Cliente para usuarios (respeta RLS)
-supabase = create_client(URL, KEY)
+# MUEVE ESTO AQUÍ ARRIBA ⬇️
+ADMIN_ID = "19789338-f0e2-4766-be43-7a8c5c805339" 
 
-# Cliente para el administrador (salta RLS)
+# Clientes
+supabase = create_client(URL, KEY)
 supabase_admin = create_client(URL, SERVICE_KEY)
 
 st.title("⚽ Prode Online: ¡Adivina y Gana!")
