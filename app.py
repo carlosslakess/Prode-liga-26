@@ -31,12 +31,11 @@ LOGOS_EQUIPOS = {
     "Villarreal": "https://upload.wikimedia.org/wikipedia/en/7/70/Villarreal_CF_logo.svg",
     "Default": "https://upload.wikimedia.org/wikipedia/commons/d/d3/Soccerball.svg"
 }
-
 # --- 1. CONFIGURACIÓN DE CONEXIÓN ---
-# IMPORTANTE: Configura estos nombres en Streamlit Cloud -> Settings -> Secrets
-URL = st.secrets["https://aaviaesmmozgngfawhap.supabase.co"]
-KEY = st.secrets["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhdmlhZXNtbW96Z25nZmF3aGFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxODQ4NjEsImV4cCI6MjA4OTc2MDg2MX0.0kWRxaVrKrXbImvk9ccViYCoKnJNYERZz6UOAPyKhM0"]           # La 'anon public key'
-SERVICE_KEY = st.secrets["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhdmlhZXNtbW96Z25nZmF3aGFwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDE4NDg2MSwiZXhwIjoyMDg5NzYwODYxfQ.JA3ETEqBHVGzM0Q-r3L0ruVWAmYoAfUUFSQrJIEahGQ"] # La 'service_role key'
+# Aquí solo ponemos los "nombres" de los secretos
+URL = st.secrets["SUPABASE_URL"]
+KEY = st.secrets["SUPABASE_KEY"]
+SERVICE_KEY = st.secrets["SUPABASE_SERVICE_KEY"]
 
 # Cliente para usuarios (respeta RLS)
 supabase = create_client(URL, KEY)
