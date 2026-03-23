@@ -149,10 +149,19 @@ else:
                         "prediccion_visitante": goles_v,
                         "user_id": st.session_state.user.id
                     }
-                    supabase.table("predictions").insert(data).execute()
-                    st.success("✅ ¡Predicción guardada!")
+                    
+                    # SI ERES EL ADMIN, USAMOS LA LLAVE MAESTRA
+                    if st.session_state.user.id == ADMIN_ID:
+                        supabase_admin.table("predictions").insert(data).execute()
+                    else:
+                        # SI ES UN USUARIO NORMAL, USA LA LLAVE NORMAL
+                        supabase.table("predictions").insert(data).execute()
+                        
+                    st.success(f"✅ ¡Predicción guardada!")
+                    time.sleep(1)
+                    st.rerun()
                 except Exception as e:
-                    st.error(f"Error al guardar apuesta: {e}")
+                    st.error(f"Error al guardar: {e}")
             st.divider()
 
 # --- 5. TABLA DE POSICIONES ---
